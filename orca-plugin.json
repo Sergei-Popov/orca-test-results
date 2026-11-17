@@ -6,7 +6,7 @@
   "version": "0.1.0",
   "description": "Review local JUnit test failures and prepare their context for a coding agent.",
   "engines": {
-    "orca": ">=1.4.246"
+    "orca": ">=1.4.248"
   },
   "execution": "trusted-worker",
   "pluginApi": 1,
@@ -24,7 +24,10 @@
   },
   "capabilities": [
     {
-      "kind": "storage:own"
+      "kind": "workspace:read"
+    },
+    {
+      "kind": "workspace:write"
     }
   ],
   "author": {

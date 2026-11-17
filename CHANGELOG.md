@@ -6,3 +6,8 @@ All notable changes to this plugin are documented here. The format follows
 `[Unreleased]` into the released version.
 
 ## [Unreleased]
+
+### Added
+
+- Workspace-local JUnit XML report discovery, failure details and source navigation.
+- An editable agent summary with an optional rerun command.

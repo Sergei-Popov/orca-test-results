@@ -1,14 +1,26 @@
 # Test Results
 
-A right-sidebar panel (`src/panel.tsx`) and the plugin's own worker (`src/worker.ts`). The panel asks with `plugin.request`, the worker answers with `orca.panels.handle`, keeps the total in `orca.storage` and tells every open panel with `orca.panels.post`; `src/protocol.ts` types both sides. Orca transpiles both files when they load, so there is no build step: save and the panel or worker reloads (a worker reload drops its in-memory state, so keep what must last in storage). `orca plugin test .` runs `src/panel.test.tsx` and `src/worker.test.ts` in Node with `orca/testing`, and `orca plugin check .` renders the panel with the worker in each `src/panel.check.ts` scenario; `npx tsc -p .` type-checks against the typings `orca plugin types .` writes to `.orca/types/`. With the folder loaded, `orca plugin dev request . counter.add --data '{"by":1}'` calls the worker as the panel does.
+Review local JUnit XML reports in the Orca sidebar and collect a failed test's details for a coding agent.
+
+## Use
+
+1. Open **Test Results** and select a local workspace. The newest report in a supported location opens automatically. Enter a workspace-relative XML path to load another report.
+2. Select a failure to see its assertion, logs and source path. **Open source** opens the file when the report names a file that exists in this workspace.
+3. Optionally enter the project's rerun command. **Prepare for agent** creates an editable summary with the selected test, report, location and failure output. Copy the summary from the text field.
+
+Typical locations include `junit.xml`, `test-results/junit.xml`, `target/surefire-reports/TEST-*.xml`, `target/nextest/default/junit.xml` and `build/test-results/test/TEST-*.xml`. The panel shows the report's modification time. The workspace branch identifies the checkout containing the report.
+
+The worker reads UTF-8 reports up to 8 MiB. The panel counts test cases in the document, displays the first 100 failures and retains a link to the full report. The rerun command is included in the summary as text.
 
 ## Develop
 
 ```sh
-orca plugin validate .
-orca plugin dev watch .    # loads this folder into Orca and prints its logs and reloads; Ctrl-C unloads it
+orca plugin types . --json
+npm ci
+npm run typecheck
+orca plugin test . --json
+orca plugin check . --json
+orca plugin validate . --json
 ```
 
-Orca names the publisher after where the plugin is installed from: the GitHub or GitLab owner of
-its repository, or `local` for a folder. See
-https://github.com/stablyai/orca/blob/main/docs/reference/plugin-authoring.md.
+Use `orca plugin inspect . --json` to review the local plugin's access and `orca plugin dev watch . --check --json` to load it for development.
