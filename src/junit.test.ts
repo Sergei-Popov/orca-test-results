@@ -70,6 +70,38 @@ test('accepts empty reports and ignores testcase-shaped extension content', () =
   assert.deepEqual(result.failures, [])
 })
 
+test('counts flat Node test runner cases alongside named suites', () => {
+  const result = parseJUnit(`<testsuites>
+    <testcase name="clear" classname="test" file="tests/filters.mjs" />
+    <testcase name="restore range" classname="test" file="tests/filters.mjs">
+      <failure type="testCodeFailure" message="All time differs from Last 30 days">assertion output</failure>
+    </testcase>
+    <testcase name="archived"><skipped type="skipped" message="true" /></testcase>
+    <testsuite name="nested"><testcase name="also works" /></testsuite>
+  </testsuites>`)
+  assert.deepEqual([result.tests, result.passed, result.failed, result.skipped], [4, 2, 1, 1])
+  assert.equal(result.failures[0].file, 'tests/filters.mjs')
+  assert.equal(result.failures[0].key, 'test-2')
+})
+
+test('reads pytest locations from short and long tracebacks when the testcase has no file', () => {
+  const report = (details: string, metadata = '') => parseJUnit(`<testsuite name="pytest">
+    <testcase name="test_range" ${metadata}><failure>${details}</failure></testcase>
+  </testsuite>`).failures[0]
+  for (const trace of [
+    'tests/search filters.py:10: in test_range\n    assert selected == expected',
+    '    assert selected == expected\n\ntests/search filters.py:10: AssertionError'
+  ]) {
+    const failure = report(trace)
+    assert.equal(failure.file, 'tests/search filters.py')
+    assert.equal(failure.line, 10)
+  }
+  const explicit = report('inner.py:33: in run', 'file="tests/original.py" line="0"')
+  assert.equal(explicit.file, 'tests/original.py')
+  assert.equal(explicit.line, 0)
+  assert.equal(report('retry this path: helpers.py:10').file, undefined)
+})
+
 test('keeps complete summary totals while clipping returned failure details', () => {
   const long = 'x'.repeat(5_000)
   const many = '<testcase name="again"><error /></testcase>'.repeat(101)

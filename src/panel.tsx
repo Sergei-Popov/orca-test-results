@@ -308,7 +308,7 @@ function reportDate(timestamp: number): string {
 
 function failureSource(failure: ReportFailure): string {
   const file = failure.source ?? failure.file
-  return file ? (failure.line ? `${file}:${failure.line}` : file) : ''
+  return file ? (failure.line !== undefined ? `${file}:${failure.line}` : file) : ''
 }
 
 function testName(failure: ReportFailure): string {
