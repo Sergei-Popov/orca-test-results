@@ -1,0 +1,58 @@
+{
+  "accent": "#B6D853",
+  "title": ["Test", "Results"],
+  "icon": "images/icon.png",
+  "cover": {
+    "out": "images/cover.png",
+    "alt": "Test Results shows 2 failures in a 42-test run, including a date range that resets after refresh.",
+    "tagline": "Trace a failure to its source.",
+    "chips": ["JUnit XML", "Node.js", "pytest", "Agent handoff"],
+    "stage": {
+      "panel": "test-results", "scenario": "failures", "theme": "dark",
+      "width": 534, "height": 1170, "scale": 1.65, "origin": { "x": 0, "y": 270 }
+    }
+  },
+  "screenshots": [
+    {
+      "out": "images/shot-1-report-overview.png",
+      "headline": "Find the failures in a run",
+      "alt": "Review test-results/junit.xml with 42 tests, 39 passed, 2 failed and 1 skipped. The list shows both failing tests.",
+      "stage": {
+        "panel": "test-results", "scenario": "failures", "theme": "dark",
+        "width": 960, "height": 1130, "origin": { "x": 0, "y": 12 }
+      }
+    },
+    {
+      "out": "images/shot-2-pytest-traceback.png",
+      "headline": "Follow a pytest traceback",
+      "alt": "Open source points to tests/test_filters.py:10. The pytest traceback shows “All time” where the test expected “Last 30 days”.",
+      "stage": {
+        "panel": "test-results", "scenario": "pytest", "theme": "dark",
+        "width": 960, "height": 1320, "origin": { "x": 0, "y": 411 }
+      }
+    },
+    {
+      "out": "images/shot-3-agent-handoff.png",
+      "headline": "Hand a failure to your agent",
+      "alt": "Copy an editable draft for tests/test_filters.py:10 with the report path and the pytest command to rerun the selected test.",
+      "stage": {
+        "panel": "test-results", "scenario": "pytest", "theme": "dark",
+        "width": 960, "height": 1530, "origin": { "x": 0, "y": 619 },
+        "act": [
+          { "type": { "label": "Rerun command (optional)" }, "text": "pytest -q tests/test_filters.py::test_retains_the_selected_date_range", "replace": true },
+          { "press": { "text": "Prepare for agent" } }
+        ],
+        "waitFor": { "text": "Agent handoff" }
+      }
+    },
+    {
+      "out": "images/shot-4-passing-run.png",
+      "headline": "Check a passing run",
+      "alt": "All 42 tests passed. The report shows zero failures and zero skipped tests. Shown in Orca's light theme.",
+      "stage": {
+        "panel": "test-results", "scenario": "passing", "theme": "light",
+        "width": 960, "height": 800, "origin": { "x": 0, "y": 0 }
+      }
+    }
+  ]
+}
