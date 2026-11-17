@@ -119,7 +119,7 @@ function startFrame(tag: SaxesTagNS, parent: Frame | undefined, capture: boolean
       return { kind: 'suite', suite: clipped([suite, name].filter(Boolean).join(' › '), MAX_LABEL) }
     }
     if (!parent) throw invalidXml('expected a testsuite or testsuites root element.')
-    if (parent.kind === 'suite' && tag.local === 'testcase') {
+    if (tag.local === 'testcase') {
       return { kind: 'case', testCase: startCase(tag, suite, capture) }
     }
   }
@@ -128,12 +128,20 @@ function startFrame(tag: SaxesTagNS, parent: Frame | undefined, capture: boolean
   return { kind: 'other' }
 }
 
-function sourceMetadata(tag: SaxesTagNS): Pick<TestFailure, 'file' | 'line' | 'duration'> {
+function sourceMetadata({ tag, details }: Case): Pick<TestFailure, 'file' | 'line' | 'duration'> {
   const metadata: Pick<TestFailure, 'file' | 'line' | 'duration'> = {}
-  const file = attribute(tag, 'file')
+  let file = attribute(tag, 'file')
+  let line = attribute(tag, 'line').trim()
+  if (!file.trim()) {
+    // pytest's default xunit2 output puts the location in its short or long traceback.
+    const frame = /^([^\s<>][^\r\n<>]*?\.py):(\d+): (?:in \S|(?:[\w.]+(?:Error|Exception)|Failed)\b)/m.exec(details)
+    if (frame) {
+      file = frame[1]
+      line = frame[2]
+    }
+  }
   if (file.trim() && file.length <= MAX_FILE_PATH) metadata.file = file
 
-  const line = attribute(tag, 'line').trim()
   if (/^\d+$/.test(line) && Number.isSafeInteger(Number(line))) metadata.line = Number(line)
 
   const time = attribute(tag, 'time').trim()
@@ -172,7 +180,7 @@ function finishCase(result: JUnitResult, testCase: Case): void {
     outcome: testCase.outcome,
     message: testCase.message,
     output: caseOutput(testCase),
-    ...sourceMetadata(tag),
+    ...sourceMetadata(testCase),
   })
 }
 
