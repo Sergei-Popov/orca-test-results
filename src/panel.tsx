@@ -118,6 +118,7 @@ interface State {
   workspaceId: string
   options: ReportOption[]
   path: string
+  attemptedPath: string
   report: TestReport | null
   failureKey: string
   visibleFailures: number
@@ -145,6 +146,7 @@ const state = atom<State>({
   workspaceId: '',
   options: [],
   path: '',
+  attemptedPath: '',
   ...clearedReport,
   loading: 'workspaces',
   opening: false,
@@ -177,30 +179,30 @@ function showError(error: unknown, signal: AbortSignal): void {
 async function refresh(preferFocus = false): Promise<void> {
   const current = read(run)
   if (!current) return
-  const { workspaceId, path, report } = read(state)
+  const { workspaceId, path, attemptedPath } = read(state)
   const signal = startLookup(current, 'workspaces', {})
   try {
     const { workspaces, suggestedId } = await plugin.request('reports.workspaces', undefined, { signal })
     if (signal.aborted) return
     const preserved = workspaces.some((workspace) => workspace.id === workspaceId) ? workspaceId : ''
     const suggested = workspaces.find((workspace) => workspace.id === suggestedId)?.id ?? ''
-    const fallback = workspaces.length === 1 ? workspaces[0].id : ''
-    const target = (preferFocus ? suggested : preserved || suggested) || fallback
+    const target = preferFocus ? suggested : preserved || suggested
     const existingPath = target === workspaceId ? path : ''
-    patch({ workspaces, workspaceId: target, path: existingPath, options: [], loading: target ? 'reports' : null })
-    if (target) await discover(target, existingPath, target === workspaceId ? report?.path : undefined, signal)
+    const retryPath = target === workspaceId ? attemptedPath : ''
+    patch({ workspaces, workspaceId: target, path: existingPath, attemptedPath: retryPath, options: [], loading: target ? 'reports' : null })
+    if (target) await discover(target, existingPath, retryPath, signal)
   } catch (error) {
     showError(error, signal)
   }
 }
 
-async function discover(workspaceId: string, path: string, loadedPath: string | undefined, signal: AbortSignal) {
+async function discover(workspaceId: string, path: string, attemptedPath: string, signal: AbortSignal) {
   const { reports } = await plugin.request('reports.discover', { workspaceId }, { signal })
   if (signal.aborted) return
   const suggested = reports[0]?.path ?? ''
   const chosen = path || suggested
   patch({ options: reports, path: chosen, loading: null })
-  if (chosen && (!path || (loadedPath && chosen === loadedPath))) {
+  if (chosen && (!path || chosen === attemptedPath)) {
     await fetchReport(workspaceId, chosen, signal)
   }
 }
@@ -208,19 +210,19 @@ async function discover(workspaceId: string, path: string, loadedPath: string | 
 async function selectWorkspace(workspaceId: string): Promise<void> {
   const current = read(run)
   if (!current || !workspaceId || workspaceId === read(state).workspaceId) return
-  const signal = startLookup(current, 'reports', { workspaceId, path: '', options: [] })
+  const signal = startLookup(current, 'reports', { workspaceId, path: '', attemptedPath: '', options: [] })
   try {
-    await discover(workspaceId, '', undefined, signal)
+    await discover(workspaceId, '', '', signal)
   } catch (error) {
     showError(error, signal)
   }
 }
 
 async function fetchReport(workspaceId: string, path: string, signal: AbortSignal): Promise<void> {
-  patch({ loading: 'report' })
+  patch({ loading: 'report', attemptedPath: path })
   const report = await plugin.request('reports.load', { workspaceId, path }, { signal })
   if (!signal.aborted) {
-    patch({ path: report.path, report, failureKey: report.failures[0]?.key ?? '', loading: null })
+    patch({ path: report.path, attemptedPath: report.path, report, failureKey: report.failures[0]?.key ?? '', loading: null })
   }
 }
 
@@ -241,7 +243,7 @@ function editPath(path: string): void {
   if (!current || path === read(state).path) return
   current.lookup?.abort()
   current.open?.abort()
-  patch({ ...clearedReport, path, loading: null, opening: false, error: null })
+  patch({ ...clearedReport, path, attemptedPath: '', loading: null, opening: false, error: null })
 }
 
 function selectFailure(key: string): void {

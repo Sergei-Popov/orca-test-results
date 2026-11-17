@@ -28,6 +28,33 @@ const passing: TestReport = {
 }
 const reportOptions = [report, passing].map(({ path, modifiedAt }) => ({ path, modifiedAt }))
 
+test('retries a failed load on refresh and leaves an unsubmitted path alone', async () => {
+  const calls: string[] = []
+  const view = await mount(panel, { host: mockHost({
+    capabilities,
+    requests: {
+      'reports.workspaces': () => ({ workspaces: [workspace], suggestedId: workspace.id }),
+      'reports.discover': () => ({ reports: reportOptions }),
+      'reports.load': ({ path }) => {
+        calls.push(path)
+        if (calls.length === 1) throw new Error('Incomplete XML')
+        return report
+      }
+    }
+  }) })
+  try {
+    assert.ok(view.find({ text: 'Incomplete XML' }))
+    await view.press({ label: 'Refresh' })
+    assert.ok(view.find({ text: 'Failed 1' }))
+    await view.type({ label: 'JUnit report path' }, 'local/unsubmitted.xml', { replace: true })
+    await view.press({ label: 'Refresh' })
+    assert.deepEqual(calls, [report.path, report.path])
+    assert.equal(view.valueOf({ label: 'JUnit report path' }), 'local/unsubmitted.xml')
+  } finally {
+    await view.unmount()
+  }
+})
+
 test('prepares a bounded handoff and opens the source and raw report for the loaded workspace', async () => {
   const calls: unknown[] = []
   const view = await mount(panel, {

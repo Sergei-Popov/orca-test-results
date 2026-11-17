@@ -58,17 +58,22 @@ async function discover(root: string) {
     const folder = await workspacePath(root, join(root, dir)).catch(() => undefined)
     if (!folder) continue
     const entries = await readdir(folder, { withFileTypes: true }).catch(() => [])
-    for (const entry of entries.filter(({ name }) => /^TEST-.+\.xml$/i.test(name)).slice(0, 80)) {
-      if (entry.isFile()) candidates.add(`${dir}/${entry.name}`)
+    for (const entry of entries) {
+      if (entry.isFile() && /^TEST-.+\.xml$/i.test(entry.name)) candidates.add(`${dir}/${entry.name}`)
     }
   }
-  const reports = await Promise.all([...candidates].map(async path => {
-    const file = await reportFile(root, path).catch(() => undefined)
-    const info = file && await stat(file).catch(() => undefined)
-    return info && info.isFile() ? { path, modifiedAt: info.mtimeMs } : undefined
-  }))
-  return reports.filter(report => report !== undefined)
-    .sort((a, b) => b.modifiedAt - a.modifiedAt || a.path.localeCompare(b.path)).slice(0, 80)
+  const paths = [...candidates]
+  const reports: { path: string; modifiedAt: number }[] = []
+  const concurrency = 32
+  for (let offset = 0; offset < paths.length; offset += concurrency) {
+    const batch = await Promise.all(paths.slice(offset, offset + concurrency).map(async path => {
+      const file = await reportFile(root, path).catch(() => undefined)
+      const info = file && await stat(file).catch(() => undefined)
+      return info && info.isFile() ? { path, modifiedAt: info.mtimeMs } : undefined
+    }))
+    reports.push(...batch.filter(report => report !== undefined))
+  }
+  return reports.sort((a, b) => b.modifiedAt - a.modifiedAt || a.path.localeCompare(b.path)).slice(0, 80)
 }
 
 async function load(root: string, path: string): Promise<TestReport> {
@@ -89,7 +94,7 @@ async function load(root: string, path: string): Promise<TestReport> {
       const source = failure.file && await sourceFile(root, file, failure.file)
       return { ...failure, ...(source ? { source: relativePath(root, source) } : {}) }
     }))
-    return { ...parsed, failures, path: relativePath(root, file), modifiedAt: info.mtimeMs }
+    return { ...parsed, failures, path: relativePath(root, resolve(root, path)), modifiedAt: info.mtimeMs }
   } finally {
     await handle.close()
   }
