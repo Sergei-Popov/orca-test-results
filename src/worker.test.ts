@@ -1,14 +1,51 @@
-// Runs src/worker.ts's activate(orca) with the orca object Orca passes, over a mock host.
+import { mkdtemp, mkdir, rm, symlink, utimes, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { assert, mockHost, mountWorker, test } from 'orca/testing'
 import * as main from './worker'
 
-test('adds to the stored total and tells open panels', async () => {
-  const host = mockHost({ storage: { total: 2 } })
+test('opens a failure source from the selected report and refuses changed or external files', async () => {
+  const fixture = await mkdtemp(join(tmpdir(), 'test-results-'))
+  const root = join(fixture, 'repo')
+  const outside = join(fixture, 'outside.xml')
+  const reportPath = 'test-results/junit.xml'
+  const report = join(root, reportPath)
+  await mkdir(join(root, 'test-results'), { recursive: true })
+  await mkdir(join(root, 'tests'))
+  await writeFile(join(root, 'tests/export.test.ts'), '')
+  await writeFile(outside, '<testsuites/>')
+  await symlink(outside, join(root, 'foreign.xml'), 'file')
+  await writeFile(report, `<testsuite name="CSV">
+    <testcase name="exports current filters" file="tests/export.test.ts" line="12">
+      <failure message="unexpected rows"><![CDATA[expected 2; found 3]]></failure>
+    </testcase>
+    <testcase name="sibling workspace" file="../outside.xml">
+      <error message="file not found"/>
+    </testcase>
+  </testsuite>`)
+  const host = mockHost({ results: {
+    'workspace.list': { workspaces: [{ id: 'local', name: 'CSV', kind: 'worktree', path: root, branch: 'csv', hostId: 'local' }], truncated: false },
+    'editor.open': { opened: true }
+  } })
   const worker = await mountWorker(main, { host })
-  assert.deepEqual(await worker.request('counter.get'), { total: 2 })
-  assert.deepEqual(await worker.request('counter.add', { by: 3 }), { total: 5 })
-  assert.deepEqual(worker.posts, [{ event: 'counter.changed', payload: { total: 5 } }])
-  assert.deepEqual(host.data().storage, { total: 5 })
-  assert.deepEqual(worker.refusals, [])
-  await worker.deactivate()
+  const selected = { workspaceId: 'local', path: reportPath }
+  try {
+    const discovered = await worker.request('reports.discover', { workspaceId: 'local' })
+    assert.deepEqual(discovered.reports.map(({ path }) => path), [reportPath])
+    const loaded = await worker.request('reports.load', selected)
+    assert.equal(loaded.failed, 2)
+    assert.equal(loaded.failures[0].source, 'tests/export.test.ts')
+    assert.equal(loaded.failures[0].line, 12)
+    assert.equal(loaded.failures[1].source, undefined)
+    const failure = { ...selected, failureKey: loaded.failures[0].key, modifiedAt: loaded.modifiedAt }
+    assert.deepEqual(await worker.request('reports.open', failure), { opened: true })
+    assert.deepEqual(host.calls.find(({ method }) => method === 'editor.open')?.params,
+      { workspaceId: 'local', path: 'tests/export.test.ts' })
+    await utimes(report, new Date(2020, 0, 1), new Date(2020, 0, 1))
+    await assert.rejects(worker.request('reports.open', failure), /report changed/i)
+    await assert.rejects(worker.request('reports.load', { ...selected, path: 'foreign.xml' }), /inside the selected workspace/i)
+  } finally {
+    await worker.deactivate()
+    await rm(fixture, { recursive: true, force: true })
+  }
 })
