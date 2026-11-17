@@ -16,7 +16,7 @@
       {
         "id": "test-results",
         "title": "Test Results",
-        "icon": "blocks",
+        "icon": "activity",
         "entry": "src/panel.tsx",
         "ui": "components"
       }
@@ -31,7 +31,32 @@
     }
   ],
   "author": {
-    "name": "Сергей Попов"
+    "name": "Sergei Popov",
+    "url": "https://github.com/Sergei-Popov"
   },
+  "repository": "https://github.com/Sergei-Popov/orca-test-results",
+  "icon": "images/icon.png",
+  "cover": {
+    "path": "images/cover.png",
+    "alt": "Test Results shows 2 failures in a 42-test run, including a date range that resets after refresh."
+  },
+  "screenshots": [
+    {
+      "path": "images/shot-1-report-overview.png",
+      "alt": "Review test-results/junit.xml with 42 tests, 39 passed, 2 failed and 1 skipped. The list shows both failing tests."
+    },
+    {
+      "path": "images/shot-2-pytest-traceback.png",
+      "alt": "Open source points to tests/test_filters.py:10. The pytest traceback shows “All time” where the test expected “Last 30 days”."
+    },
+    {
+      "path": "images/shot-3-agent-handoff.png",
+      "alt": "Copy an editable draft for tests/test_filters.py:10 with the report path and the pytest command to rerun the selected test."
+    },
+    {
+      "path": "images/shot-4-passing-run.png",
+      "alt": "All 42 tests passed. The report shows zero failures and zero skipped tests. Shown in Orca's light theme."
+    }
+  ],
   "license": "MIT"
 }

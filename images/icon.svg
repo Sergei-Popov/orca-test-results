@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="moss" x1="28" y1="0" x2="203" y2="256" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#799630"/>
+      <stop offset=".55" stop-color="#506D28"/>
+      <stop offset="1" stop-color="#294524"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="52" fill="url(#moss)"/>
+  <g fill="none" stroke="#F4FADC" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m53 65 10 10 20-24"/>
+    <path d="M112 64h73" opacity=".9"/>
+  </g>
+  <rect x="30" y="97" width="196" height="62" rx="17" fill="#F4FADC"/>
+  <g fill="none" stroke="#354E25" stroke-width="11" stroke-linecap="round">
+    <path d="m58 118 20 20m0-20-20 20"/>
+    <path d="M112 128h84"/>
+  </g>
+  <g fill="none" stroke="#D2E6A5" stroke-width="12" stroke-linecap="round">
+    <path d="M56 192h24"/>
+    <path d="M112 192h51" opacity=".85"/>
+  </g>
+</svg>

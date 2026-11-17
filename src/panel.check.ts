@@ -1,4 +1,5 @@
 import { defineCheck, hostError } from 'orca/testing'
+import { parseJUnit } from './junit'
 import type { TestReport, Workspace } from './protocol'
 
 const workspace: Workspace = {
@@ -45,6 +46,25 @@ const reports = [report, { path: 'reports/previous.xml', modifiedAt: report.modi
 const workspaceRequest = () => ({ workspaces: [workspace], suggestedId: workspace.id })
 const reportsRequest = () => ({ reports })
 
+// Condensed output from pytest's xunit2 reporter for the synthetic search filters tests.
+const pytestRun = parseJUnit(`<testsuites name="pytest tests"><testsuite name="pytest">
+  <testcase classname="tests.test_filters" name="test_starts_with_all_filters_cleared" />
+  <testcase classname="tests.test_filters" name="test_retains_the_selected_date_range">
+    <failure message="AssertionError: assert 'All time' == 'Last 30 days'">tests/test_filters.py:10: in test_retains_the_selected_date_range
+    assert selected == "Last 30 days"
+E   AssertionError: assert 'All time' == 'Last 30 days'
+E     - Last 30 days
+E     + All time</failure>
+  </testcase>
+  <testcase classname="tests.test_filters" name="test_restores_archived_filters"><skipped /></testcase>
+</testsuite></testsuites>`)
+const pytestReport: TestReport = {
+  ...pytestRun,
+  modifiedAt: report.modifiedAt,
+  path: 'reports/junit.xml',
+  failures: pytestRun.failures.map(failure => ({ ...failure, source: failure.file }))
+}
+
 export default defineCheck({
   failures: {
     capabilities,
@@ -52,6 +72,14 @@ export default defineCheck({
       'reports.workspaces': workspaceRequest,
       'reports.discover': reportsRequest,
       'reports.load': () => report
+    }
+  },
+  pytest: {
+    capabilities,
+    requests: {
+      'reports.workspaces': workspaceRequest,
+      'reports.discover': () => ({ reports: [{ path: pytestReport.path, modifiedAt: pytestReport.modifiedAt }] }),
+      'reports.load': () => pytestReport
     }
   },
   passing: {
