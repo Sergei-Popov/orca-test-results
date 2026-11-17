@@ -16,8 +16,10 @@ The worker reads UTF-8 reports up to 8 MiB. The panel counts test cases in the d
 
 ```sh
 orca plugin types . --json
-npm ci
-npm run typecheck
+npx -y -p typescript@5.9.3 -p @types/node@22.20.5 -- sh -c '
+  types_dir=$(dirname "$(dirname "$(command -v tsc)")")/@types
+  tsc -p . --typeRoots "./.orca/types,$types_dir"
+'
 orca plugin test . --json
 orca plugin check . --json
 orca plugin validate . --json
